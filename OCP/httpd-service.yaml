@@ -1,0 +1,15 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: httpd
+  labels:
+    app: httpd
+spec:
+  ports:
+    - name: httpd
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  selector:
+    name: httpd

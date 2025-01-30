@@ -1,0 +1,30 @@
+#####
+from docker examples - 
+
+oc new-app --docker-image docker.io/openshiftkatacoda/blog-django-py
+oc new-app --name gitlab --docker-image quay.io/redhattraining/gitlab-ce:8.4.3-ce.0
+
+
+# The set below work together but you ned to specify the environment variables as secrets or in line
+oc new-app --name mysql --docker-image registry.redhat.io/rhel8/mysql-80:1
+oc new-app --name quotes --docker-image quay.io/redhattraining/famous-quotes:2.1
+
+#secrets for the above two
+oc create secret generic mysql --from-literal user=myuser --from-literal password=redhat123 --from-literal database=test_secrets --from-literal hostname=mysql -n <project-name>
+oc set env deployment/mysql --from secret/mysql --prefix MYSQL_
+oc set env deployment/quotes --from secret/mysql --prefix QUOTES_
+
+# Wordpress example from docker images
+oc new-app --name mysql --docker-image registry.redhat.io/rhel8/mysql-80:1
+oc create secret generic review-secret --from-literal user=wpuser --from-literal password=redhat123 --from-literal database=wordpress
+oc set env deployment/mysql --from secret/review-secret --prefix MYSQL_
+.
+oc new-app --name wordpress --docker-file quay.io/redhattraining/wordpress:5.7-php7.4-apache \
+-e WORDPRESS_DB_HOST=mysql -e WORDPRESS_DB_NAME=wordpress -e WORDPRESS_TITLE=auth-review \ 
+-e WORDPRESS_USER=wpuser -e WORDPRESS_PASSWORD=redhat123 -e WORDPRESS_EMAIL=student@redhat.com \
+-e WORDPRESS_URL=wordpress-review.apps.cnv.example.com
+oc set env deployment/wordpress --from secret/review-secret --prefix WORDPRESS_DB_
+.
+oc expose svc wordpress --hostname wordpress-review.apps.cnv.example.com
+
+

@@ -1,0 +1,33 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: httpd-claim
+  namespace: httpd-persistent
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: httpd
+  namespace: httpd-persistent
+spec:
+  containers:
+  - image: registry.redhat.io/rhel8/httpd-24:latest
+    name: httpd
+    ports:
+    - containerPort: 8080
+      name: http
+      protocol: TCP
+    volumeMounts:
+    - mountPath: /var/www/html
+      name: httpd-claim
+  volumes:
+  - name: httpd-claim
+    persistentVolumeClaim:
+      claimName: httpd-claim

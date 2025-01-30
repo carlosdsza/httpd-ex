@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-test-app
+spec:
+  selector:
+    matchLabels:
+      app: scc-article-sc-sa
+  template:
+    metadata:
+      labels:
+        app: scc-article-sc-sa
+    spec:
+      serviceAccountName: test-sa
+      containers:
+      - image: ubi8/ubi-minimal
+        name: ubi-minimal
+        command: ['sh', '-c', 'echo "Hello from user $(id -u)" && sleep infinity']
+        securityContext:
+          runAsUser: 10000
+          runAsGroup: 10000

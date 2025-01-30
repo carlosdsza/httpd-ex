@@ -1,0 +1,32 @@
+### https://access.redhat.com/solutions/5135211
+
+# Basic new-project yaml
+$ cat project.yaml 
+apiVersion: project.openshift.io/v1
+kind: Project
+metadata:
+  name: my-project
+
+Using CLI:
+oc create -f project.yaml
+
+Using API: 
+export TOKEN="ug8vLVb1BYUfb4tqofYJnXxTDijpRPIJ0CJaJyjaDL8" ## get your token from webui or oc whoami -t
+export PROJECT_NAME=cds-api-proj
+
+JSON:
+curl -k -v \
+-X POST \
+-H "User-Agent: oc/openshift (linux/amd64) kubernetes/2576e48" \
+-H "Authorization: Bearer $TOKEN" \
+-H "Accept: application/json, */*" \
+-H "Content-Type: application/json" \
+https://api.cnv.example.com:6443/apis/project.openshift.io/v1/projectrequests \
+--data '{"kind":"ProjectRequest","apiVersion":"project.openshift.io/v1","metadata":{"name":"'${PROJECT_NAME}'","creationTimestamp":null}}'
+
+curl -k -v \
+-X DELETE \
+-H "Authorization: Bearer $TOKEN" \
+-H "Content-Type: application/json" \
+-H "User-Agent: oc/openshift (linux/amd64) kubernetes/2576e48" \
+-H "Accept: application/json" 'https://api.cnv.example.com:6443/apis/project.openshift.io/v1/projects/'${PROJECT_NAME}

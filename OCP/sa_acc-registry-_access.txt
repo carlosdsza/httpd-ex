@@ -1,0 +1,97 @@
+Generally if you want programmatic access, i.e. not personalized access like the apps team, a jenkis job and alike OCP uses the concept of service accounts. Those are not personalised but can be assigned roles as you could do with users
+and have secrets that can be used for oc or image logins.
+In the particular case you obviously need to have an exposed registry route (which you have), create a service account preferably per namespace (but wider scopes are possible) , assigne proper role (for push it is registry editor), fetch the secret and log in.
+
+I will post below the steps, but please also take some time to review the docs to get a more holistic view on service accounts:
+exposed registry : https://docs.openshift.com/container-platform/4.9/registry/securing-exposing-registry.html
+create service account: https://docs.openshift.com/container-platform/4.9/authentication/using-service-accounts-in-applications.html#service-accounts-managing_using-service-accounts
+assigning roles to service account: https://docs.openshift.com/container-platform/4.9/authentication/understanding-and-creating-service-accounts.html#service-accounts-granting-roles_understanding-service-accounts
+
+~~~
+Following as a cluster admin:
+
+# set vars to make life easier
+PROJECT=test0
+SERVICE_ACCOUNT=sa-${PROJECT}-full-registry-access
+HOST=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
+
+# Let's start with a new project
+oc new-project ${PROJECT}
+
+# create a service account
+oc create sa ${SERVICE_ACCOUNT}
+
+#assign role to service account as well as scope, i.e. this namespace/project
+oc policy add-role-to-user registry-editor system:serviceaccount:${PROJECT}:${SERVICE_ACCOUNT} -n $PROJECT
+
+# when creating a service account, 2 secrets are created for the same as well
+#
+SECRET=$(oc get secrets|grep ${SERVICE_ACCOUNT}-token |head -1 |awk '{print $1}')
+TOKEN=$(oc describe secret ${SECRET} | awk '/^token/ {print $2}')
+
+# login with the created service account and token
+podman login -u ${SERVICE_ACCOUNT} -p ${TOKEN} ${HOST} [--tls-verify=false]
+
+#Let's try a push
+## tag an image
+podman tag mcr.microsoft.com/azure-cli ${HOST}/${PROJECT}/az:latest
+
+## push image
+podman push ${HOST}/${PROJECT}/az:latest [--tls-verify=false]
+
+~~~
+Test run from my system
+~~~
+$ PROJECT=test0
+$ SERVICE_ACCOUNT=sa-${PROJECT}-full-registry-access
+$ HOST=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
+$
+$ oc new-project ${PROJECT}
+Now using project "test0" on server "https://api.dmoessne.azure.csa-emea.net:6443".
+
+You can add applications to this project with the 'new-app' command. For example, try:
+
+    oc new-app rails-postgresql-example
+
+to build a new example application in Ruby. Or use kubectl to deploy a simple Kubernetes application:
+
+    kubectl create deployment hello-node --image=k8s.gcr.io/serve_hostname
+
+$
+$ oc create sa ${SERVICE_ACCOUNT}
+serviceaccount/sa-test0-full-registry-access created
+$
+$ oc policy add-role-to-user registry-editor system:serviceaccount:${PROJECT}:${SERVICE_ACCOUNT} -n $PROJECT
+clusterrole.rbac.authorization.k8s.io/registry-editor added: "system:serviceaccount:test0:sa-test0-full-registry-access"
+$
+$ SECRET=$(oc get secrets|grep ${SERVICE_ACCOUNT}-token |head -1 |awk '{print $1}')
+$ TOKEN=$(oc describe secret ${SECRET} | awk '/^token/ {print $2}')
+$
+$ podman login -u ${SERVICE_ACCOUNT} -p ${TOKEN} ${HOST} --tls-verify=false
+Login Succeeded!
+$
+$ podman tag mcr.microsoft.com/azure-cli ${HOST}/${PROJECT}/az:latest
+$ podman push ${HOST}/${PROJECT}/az:latest --tls-verify=false
+Getting image source signatures
+Copying blob ff768a1413ba done  
+Copying blob d6cf9dabd86a done  
+Copying blob b8cacc2e2c3b done  
+Copying blob 11e10081c87a done  
+Copying blob 5a73e7de9c96 done  
+Copying blob 21e6822647b4 done  
+Copying blob 4cd9d85546e1 done  
+Copying blob 07970fbbd16c done  
+Copying blob 7d06d46f4102 done  
+Copying blob fb190e4954e7 done  
+Copying blob 2fde7f95afdf done  
+Copying config fa1121cad4 done  
+Writing manifest to image destination
+Storing signatures
+$
+
+~~~
+
+Hope this helps.
+
+All the best,
+daniel
