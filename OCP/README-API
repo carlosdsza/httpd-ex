@@ -11,7 +11,7 @@ Using CLI:
 oc create -f project.yaml
 
 Using API: 
-export TOKEN="ug8vLVb1BYUfb4tqofYJnXxTDijpRPIJ0CJaJyjaDL8" ## get your token from webui or oc whoami -t
+export TOKEN="<...>" ## get your token from webui or oc whoami -t
 export PROJECT_NAME=cds-api-proj
 
 JSON:
